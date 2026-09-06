@@ -1,0 +1,12 @@
+import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
+import { classifyPriceBand, highestPriceBand } from '../utils/classifyPriceBand'
+import { formatINR } from '../utils/cart'
+import { trackEvent } from '../analytics/trackEvent'
+import { hasTrackedPurchase, markPurchaseTracked } from '../utils/purchaseTracking'
+
+export function Confirmation() { const [order] = useState(() => { try { return JSON.parse(sessionStorage.getItem('sole-spectrum-order') || 'null') } catch { return null } }); const [tracked, setTracked] = useState(false)
+  useEffect(() => { if (!order) return; if (hasTrackedPurchase(order.purchaseId)) { setTracked(true); return } markPurchaseTracked(order.purchaseId); setTracked(true); trackEvent({ name: 'purchase', eventType: 'commerce.purchases', pageName: 'Order confirmation', order, products: order.items }) }, [order])
+  if (!order) return <main className="page"><div className="empty-state"><h1>No order found.</h1><p>Complete checkout before visiting confirmation.</p><Link className="button button-dark" to="/products">Shop the collection</Link></div></main>
+  return <main className="page confirmation-page"><div className="confirmation-header"><p className="eyebrow">Order received / {order.purchaseId}</p><h1>Good choice.<br /><em>Good movement.</em></h1><p>Thanks, {order.customerName}. Your mock order is on its way through the imagination.</p></div><div className="order-detail"><div><p className="eyebrow">{new Date(order.createdAt).toLocaleString()} · {order.city}</p>{order.items.map((item) => <div className="order-line" key={item.key}><img src={item.image} alt="" /><div><h2>{item.name} <small>× {item.quantity}</small></h2><p>{item.brand} · Size {item.size} · {item.color}</p><span className={`band band-${classifyPriceBand(item.finalUnitPrice)}`}>{classifyPriceBand(item.finalUnitPrice).replace('_', ' ')}</span></div><strong>{formatINR(item.finalUnitPrice * item.quantity)}</strong></div>)}</div><aside className="confirmation-aside"><p className="eyebrow">Order total</p><strong className="big-total">{formatINR(order.total)}</strong><p>Highest purchase band: <b>{highestPriceBand(order.items.map((item) => classifyPriceBand(item.finalUnitPrice))).replace('_', '-')}</b></p><p className="muted">Analytics purchase event: {tracked ? 'recorded once' : 'pending'}</p><Link className="button button-dark" to="/products">Continue browsing ↗</Link></aside></div></main>
+}
